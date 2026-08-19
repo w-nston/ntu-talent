@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Starlight Persona Quiz — NTU Talent Scholars</title>
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;700&family=Quicksand:wght@500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#e8f6fd;
+    --ink:#1e3a7b;
+    --slot:#213e7f;
+    --btn:#cfe0f2;
+    --btn-hover:#bcd5ee;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{
+    background:var(--bg);
+    color:var(--ink);
+    font-family:"Quicksand",system-ui,-apple-system,"Segoe UI",sans-serif;
+    min-height:100vh;
+    display:flex;justify-content:center;
+    padding:24px 16px 48px;
+  }
+  .app{width:100%;max-width:394px}
+
+  .screen{display:none;animation:fade .35s ease both}
+  .screen.active{display:block}
+  @keyframes fade{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+
+  /* ---------- intro ---------- */
+  .screen.active.intro{display:flex}
+  .intro{min-height:78vh;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:28px}
+  .intro h1{
+    font-family:"Baloo 2",cursive;font-weight:700;
+    font-size:24px;line-height:1.25;margin:0;max-width:280px;
+  }
+  .start{
+    font-family:"Baloo 2",cursive;font-weight:700;font-size:16px;
+    background:var(--slot);color:#fff;border:0;border-radius:14px;
+    padding:14px 34px;cursor:pointer;box-shadow:0 6px 16px rgba(33,62,127,.25);
+    transition:transform .15s ease, box-shadow .15s ease;
+  }
+  .start:hover{transform:translateY(-2px);box-shadow:0 10px 22px rgba(33,62,127,.3)}
+
+  /* ---------- question ---------- */
+  .progress{height:6px;border-radius:99px;background:#d7ecf8;overflow:hidden;margin:8px 0 34px}
+  .progress i{display:block;height:100%;background:var(--slot);border-radius:99px;transition:width .35s ease}
+  .q{
+    font-family:"Baloo 2",cursive;font-weight:700;
+    font-size:21px;line-height:1.3;text-align:center;margin:0 auto 30px;max-width:300px;
+  }
+  .slot{
+    height:143px;border-radius:16px;background:var(--slot);margin:0 0 34px;
+    display:flex;align-items:center;justify-content:center;
+  }
+  .slot img{width:100%;height:100%;object-fit:cover;border-radius:16px}
+  .opts{display:flex;flex-direction:column;gap:12px}
+  .opt{
+    width:100%;border:0;cursor:pointer;
+    background:var(--btn);color:#12203d;
+    font-family:"Quicksand",sans-serif;font-weight:600;font-size:13.5px;line-height:1.4;
+    border-radius:14px;padding:15px 18px;text-align:center;
+    transition:background .15s ease, transform .15s ease;
+  }
+  .opt:hover{background:var(--btn-hover);transform:translateY(-2px)}
+  .opt:active{transform:translateY(0)}
+  .back{
+    display:block;margin:26px auto 0;background:none;border:0;cursor:pointer;
+    color:#6b8bbd;font-family:"Quicksand",sans-serif;font-weight:600;font-size:12.5px;
+  }
+  .back:hover{color:var(--ink)}
+
+  /* ---------- result ---------- */
+  .result h2{
+    font-family:"Baloo 2",cursive;font-weight:700;font-size:22px;line-height:1.25;
+    text-align:center;margin:14px auto 22px;max-width:280px;
+  }
+  /* the result card breaks out of the 394px column so the art can run bigger */
+  #result.active{
+    width:100vw;max-width:none;
+    margin-left:calc(-50vw + 50%);
+    padding:0;
+  }
+  .result img{
+    width:100%;max-width:680px;
+    display:block;margin:4px auto 0;border-radius:14px;
+  }
+  .again{
+    display:block;margin:26px auto 0;
+    font-family:"Baloo 2",cursive;font-weight:700;font-size:15px;
+    background:var(--slot);color:#fff;border:0;border-radius:14px;padding:13px 30px;cursor:pointer;
+  }
+  .again:hover{opacity:.9}
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- 00 -->
+  <section class="screen active intro" id="intro">
+    <h1>Journey to see who the star-fishes think you are!</h1>
+    <button class="start" onclick="start()">Begin the journey</button>
+  </section>
+
+  <!-- question -->
+  <section class="screen" id="question">
+    <div class="progress"><i id="bar"></i></div>
+    <h2 class="q" id="qtext"></h2>
+    <div class="slot" id="qslot"></div>
+    <div class="opts" id="qopts"></div>
+    <button class="back" onclick="back()">← back</button>
+  </section>
+
+  <!-- result -->
+  <section class="screen result" id="result">
+    <img id="rimg" alt="Your starlight persona">
+    <button class="again" onclick="reset()">Take it again</button>
+  </section>
+
+</div>
+
+<script>
+/* ------------------------------------------------------------------
+   The quiz is one data table. Each node = a screen from the assets.
+   `next` maps an option index -> another node id, or {result:"..."}.
+------------------------------------------------------------------ */
+const RESULTS = {
+  guestStar:   "assets/07.1.png",  // Guest Star
+  perseids:    "assets/07.2.png",  // The Perseids
+  orion:       "assets/06.5.png",  // Orion
+  betelguese:  "assets/06.2.png",  // Betelguese
+  ceres:       "assets/06.4.png",  // Ceres
+  polaris:     "assets/06.3.png",  // Polaris
+  sagittarius: "assets/06.6.png",  // Sagittarius A*
+  siriusB:     "assets/06.7.png",  // Sirius B
+  siriusA:     "assets/06.8.png"   // Sirius A
+};
+
+const NODES = {
+  /* 01 */
+  q1:{ step:1, text:"You are in your room when two portals open before you, you choose…",
+    opts:[
+      {label:"Left portal, it is bright and colourful.", next:"q2_bright"},
+      {label:"Right portal, it is mysterious and you can’t wait where it will take you.", next:"q2_dark"}
+    ]},
+
+  /* 02 — same screen on both branches, branch is remembered */
+  q2_bright:{ step:2, text:"The portal leads you to a group of stars dancing around in a circle, would you…",
+    opts:[{label:"Admire them from a distance", next:"q3_1"},
+          {label:"Join them and start dancing.", next:"q3_1"}]},
+  q2_dark:{ step:2, text:"The portal leads you to a group of stars dancing around in a circle, would you…",
+    opts:[{label:"Admire them from a distance", next:"q3_2"},
+          {label:"Join them and start dancing.", next:"q3_2"}]},
+
+  /* 03.1 / 03.2 */
+  q3_1:{ step:3, text:"One of the star-people approaches you with a moon, you…",
+    opts:[{label:"Offer them to help carry.", next:"q4_1", tag:"giving"},
+          {label:"Take it and try how it works.", next:"q4_1", tag:"curious"}]},
+  q3_2:{ step:3, text:"One of the star-people takes out and hands you a moon, you…",
+    opts:[{label:"Wonder what secrets the moon hold.", next:"q4_2", tag:"curious"},
+          {label:"Feels unsure about being handed the moon.", next:"q4_2", tag:"giving"}]},
+
+  /* 04.1 / 04.2 — same screen, routes by the 03 tag + this choice */
+  q4_1:{ step:4, text:"The moon creates a whirlpool that transports you into another universe, you…",
+    opts:[{label:"Are excited for a brand new adventure!", next:route("excited")},
+          {label:"Worry where the mysterious portal will take you.", next:route("worry")}]},
+  q4_2:{ step:4, text:"The moon creates a whirlpool that transports you into another universe, you…",
+    opts:[{label:"Are excited for a brand new adventure!", next:route("excited")},
+          {label:"Worry where the mysterious portal will take you.", next:route("worry")}]},
+
+  /* 05.1 – 05.4 */
+  q5_1:{ step:5, text:"Your moon starts glowing the moment you arrive in this new universe, you…",
+    opts:[{label:"Race to show all the star-fishes around you before it fades.", next:"q6"},
+          {label:"Grip your moon tightly and refuse to let go.", result:"orion"}]},
+  q5_2:{ step:5, text:"In this universe, two star-fishes are arguing who gets the moon, you…",
+    opts:[{label:"Take charge and try to settle the arguments by throwing lots.", result:"betelguese"},
+          {label:"Offer your moon that the star-people gave you.", result:"ceres"}]},
+  q5_3:{ step:5, text:"In the new universe, star-fishes welcome you, you…",
+    opts:[{label:"Can’t help think if the star-people will worry that you are gone.", result:"polaris"},
+          {label:"Ask them how the portal works.", result:"sagittarius"}]},
+  q5_4:{ step:5, text:"In the new universe, star-fishes swarm you to swim towards the sun, you…",
+    opts:[{label:"Hesitate, check if it’s safe.", result:"siriusB"},
+          {label:"Shrug, go along with the group.", result:"siriusA"}]},
+
+  /* 06.1 */
+  q6:{ step:6, text:"All the star-fishes are watching, you…",
+    opts:[{label:"Strike a pose, make it a moment!", result:"guestStar"},
+          {label:"Start playing tricks with the star to see what else can it do.", result:"perseids"}]}
+};
+
+/* 03-tag x 04-choice -> which 05 screen you land on */
+function route(mood){
+  return function(state){
+    const curious = state.tags.includes("curious");
+    if (curious) return mood === "excited" ? "q5_1" : "q5_3";
+    return mood === "excited" ? "q5_2" : "q5_4";
+  };
+}
+
+const TOTAL = 6;
+let state, history;
+
+function reset(){
+  state = {tags:[]};
+  history = [];
+  show("intro");
+  window.scrollTo(0,0);
+}
+function start(){ goto("q1"); }
+
+function goto(id){
+  history.push({id:id, tags:state.tags.slice()});
+  render(id);
+}
+function back(){
+  history.pop();                       // drop current
+  const prev = history.pop();          // step back one
+  if(!prev){ reset(); return; }
+  state.tags = prev.tags;
+  goto(prev.id);
+}
+
+function render(id){
+  const n = NODES[id];
+  document.getElementById("qtext").textContent = n.text;
+  document.getElementById("bar").style.width = (n.step / TOTAL * 100) + "%";
+  const slot = document.getElementById("qslot");
+  slot.innerHTML = n.art ? '<img src="'+n.art+'" alt="">' : '';
+
+  const box = document.getElementById("qopts");
+  box.innerHTML = "";
+  n.opts.forEach(function(o){
+    const b = document.createElement("button");
+    b.className = "opt";
+    b.textContent = o.label;
+    b.onclick = function(){ choose(o); };
+    box.appendChild(b);
+  });
+  show("question");
+  window.scrollTo(0,0);
+}
+
+function choose(o){
+  if(o.tag) state.tags.push(o.tag);
+  if(o.result){ finish(o.result); return; }
+  const next = (typeof o.next === "function") ? o.next(state) : o.next;
+  goto(next);
+}
+
+function finish(key){
+  document.getElementById("rimg").src = RESULTS[key];
+  show("result");
+  window.scrollTo(0,0);
+}
+
+function show(id){
+  ["intro","question","result"].forEach(function(s){
+    document.getElementById(s).classList.toggle("active", s === id);
+  });
+}
+
+reset();
+</script>
+</body>
+</html>
